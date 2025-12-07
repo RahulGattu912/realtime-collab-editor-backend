@@ -1,18 +1,18 @@
-FROM eclipse-temurin:17-jdk-alpine
-
+# ------------ STAGE 1: Build the JAR ------------------
+FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
-COPY ./mvnw .
-COPY ./.mvn ./.mvn
-COPY ./pom.xml .
+COPY pom.xml .
+COPY src ./src
 
-RUN chmod +x mvnw
-RUN ./mvnw dependency:go-offline
+RUN mvn -e -DskipTests clean package
 
-COPY ./src ./src
+# ------------ STAGE 2: Run the JAR --------------------
+FROM eclipse-temurin:17-jdk-alpine
+WORKDIR /app
 
-RUN ./mvnw clean package -DskipTests
+COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
 
-CMD ["java", "-jar", "target/*.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
